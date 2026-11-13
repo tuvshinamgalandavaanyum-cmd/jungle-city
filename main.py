@@ -33,7 +33,7 @@ EXTENSIONS = (
     "cogs.cars",
     "cogs.auction",
     "cogs.photo",
-    "cogs.wardrobe", "cogs.salon", "cogs.casino2", "cogs.history", "cogs.dately",
+    "cogs.wardrobe", "cogs.salon", "cogs.casino2", "cogs.history", "cogs.dately", "cogs.staff",
 )
 
 # үхсэн дүр зөвхөн эдгээр командыг ашиглана

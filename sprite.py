@@ -54,6 +54,118 @@ HAIR_COLORS = [  # (түлхүүр, нэр, hex)
 ]
 HAIR_HEX = {k: h for k, _, h in HAIR_COLORS}
 
+# ---------- Makeup ----------
+MAKEUP_LIPS = [  # (түлхүүр, нэр, hex)
+    ("red", "Улаан", "#d1243a"), ("pink", "Ягаан", "#ec6fa0"), ("nude", "Нүцгэн (nude)", "#c98a7a"),
+    ("berry", "Нэрс", "#8e2a5a"), ("coral", "Шүрэн", "#f0725c"), ("purple", "Нил ягаан", "#7a3bb0"),
+    ("black", "Хар", "#26202c"), ("gold", "Алт", "#e2b53c"),
+]
+MAKEUP_EYES = [
+    ("blue", "Цэнхэр", "#3b82f6"), ("purple", "Нил ягаан", "#8b5cf6"), ("pink", "Ягаан", "#f472b6"),
+    ("green", "Ногоон", "#22c55e"), ("gold", "Алт", "#eab308"), ("smoky", "Утаан (smoky)", "#4b5563"),
+    ("teal", "Номин", "#14b8a6"), ("red", "Улаан", "#ef4444"),
+]
+MAKEUP_BLUSH = [
+    ("peach", "Тоорын", "#f8a58b"), ("pink", "Ягаан", "#f472b6"), ("rose", "Сарнай", "#e11d6a"),
+    ("red", "Улаан", "#dc2626"), ("purple", "Нил ягаан", "#a855f7"), ("coral", "Шүрэн", "#fb7185"),
+]
+MAKEUP_EXTRAS = [  # (түлхүүр, нэр, emoji)
+    ("freckles", "Сорви (freckles)", "🟤"), ("mole", "Хар хэвлий (beauty mark)", "⚫"),
+    ("liner", "Нүдний шугам (eyeliner)", "🖊️"), ("lashes", "Сормуус", "👁️"),
+    ("star", "Одон гялгар (face gem)", "⭐"), ("warpaint", "Дайны будаг", "🔥"),
+    ("tears", "Нулимсны дусал", "💧"),
+]
+MAKEUP_HEX = {
+    "lips": {k: h for k, _, h in MAKEUP_LIPS},
+    "eyes": {k: h for k, _, h in MAKEUP_EYES},
+    "blush": {k: h for k, _, h in MAKEUP_BLUSH},
+}
+
+
+def parse_makeup(text):
+    """'lips:red|eyes:blue|blush:pink|extra:freckles,liner' -> dict. Хоосон бол {}."""
+    out = {}
+    for part in (text or "").split("|"):
+        if ":" not in part:
+            continue
+        k, v = part.split(":", 1)
+        if k == "extra":
+            out[k] = [x for x in v.split(",") if x in {e[0] for e in MAKEUP_EXTRAS}]
+        elif k in MAKEUP_HEX and v in MAKEUP_HEX[k]:
+            out[k] = v
+    if not out.get("extra"):
+        out.pop("extra", None)
+    return out
+
+
+def dump_makeup(mk: dict) -> str:
+    parts = [f"{k}:{mk[k]}" for k in ("lips", "eyes", "blush") if mk.get(k)]
+    if mk.get("extra"):
+        parts.append("extra:" + ",".join(mk["extra"]))
+    return "|".join(parts)
+
+
+def _mix(a, b, t):
+    return tuple(int(a[i] * (1 - t) + b[i] * t) for i in range(3)) + (255,)
+
+
+def _makeup(cv, mk, hx, oy, skin):
+    """Нүүрний будалт: нүд, хацар, уруул дээр зурна."""
+    if not mk:
+        return
+    lips, eyes, blush = mk.get("lips"), mk.get("eyes"), mk.get("blush")
+    extra = mk.get("extra") or []
+    if blush:
+        c = _mix(skin, _rgb(MAKEUP_HEX["blush"][blush]), 0.7)
+        cv.r(hx + 1, oy + 11, 3, 2, c)
+        cv.r(hx + 10, oy + 11, 3, 2, c)
+    if eyes:
+        c = _rgb(MAKEUP_HEX["eyes"][eyes])
+        d = _sh(c, 0.75)
+        for ex in (hx + 3, hx + 9):
+            cv.r(ex - 1, oy + 7, 4, 1, c)
+            cv.p(ex - 1, oy + 8, d)
+            cv.p(ex + 2, oy + 8, d)
+    if "liner" in extra:
+        ink = (20, 16, 28, 255)
+        for ex in (hx + 3, hx + 9):
+            cv.r(ex, oy + 7, 2, 1, ink)
+        cv.p(hx + 2, oy + 7, ink)
+        cv.p(hx + 12, oy + 7, ink)
+        cv.p(hx + 1, oy + 6, ink)
+        cv.p(hx + 13, oy + 6, ink)
+    if "lashes" in extra:
+        ink = (20, 16, 28, 255)
+        for ex in (hx + 3, hx + 9):
+            cv.p(ex - 1, oy + 7, ink)
+            cv.p(ex + 2, oy + 7, ink)
+    if "freckles" in extra:
+        fc = _sh(skin, 0.7)
+        for fx, fy in ((hx + 3, oy + 10), (hx + 5, oy + 11), (hx + 4, oy + 12), (hx + 9, oy + 11), (hx + 11, oy + 10), (hx + 10, oy + 12)):
+            cv.p(fx, fy, fc)
+    if "mole" in extra:
+        cv.p(hx + 11, oy + 12, (40, 24, 20, 255))
+    if "star" in extra:
+        cv.p(hx + 12, oy + 9, (255, 236, 120, 255))
+        cv.p(hx + 12, oy + 8, (255, 255, 255, 255))
+        cv.p(hx + 11, oy + 9, (255, 200, 60, 255))
+        cv.p(hx + 13, oy + 9, (255, 200, 60, 255))
+    if "warpaint" in extra:
+        red = (200, 30, 40, 255)
+        cv.r(hx + 1, oy + 9, 3, 1, red)
+        cv.r(hx + 1, oy + 11, 3, 1, red)
+        cv.r(hx + 10, oy + 9, 3, 1, red)
+        cv.r(hx + 10, oy + 11, 3, 1, red)
+    if "tears" in extra:
+        cv.p(hx + 3, oy + 11, (120, 200, 255, 255))
+        cv.p(hx + 3, oy + 12, (190, 230, 255, 255))
+        cv.p(hx + 10, oy + 11, (120, 200, 255, 255))
+    if lips:
+        c = _rgb(MAKEUP_HEX["lips"][lips])
+        cv.r(hx + 5, oy + 12, 4, 1, c)
+        cv.r(hx + 6, oy + 13, 2, 1, _sh(c, 0.8))
+        cv.p(hx + 6, oy + 12, _sh(c, 1.3))
+
 
 def _hair_back(cv, style, hx, oy, hair):
     """Толгойн ард (дээр биеийн өмнө, нүүрнээс өмнө) зурагдах үс."""
@@ -300,6 +412,7 @@ def _character(frame, gender, skin_hex, outfit, dead=False):
         cv.r(hx + 2, oy + 11, 2, 1, (244, 143, 160, 255))
         cv.r(hx + 10, oy + 11, 2, 1, (244, 143, 160, 255))
         cv.r(hx + 6, oy + 12, 2, 1, (150, 60, 60, 255))
+        _makeup(cv, outfit.get("makeup") or {}, hx, oy, skin)
     # ---- сэлбэг (гоёл) ----
     acc_style, acc_c = outfit.get("acc", (None, None))
     if acc_style:

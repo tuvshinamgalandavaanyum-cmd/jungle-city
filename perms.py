@@ -5,6 +5,14 @@ async def is_admin(bot, user) -> bool:
     return await bot.db.is_admin(user.id)
 
 
+async def is_staff(bot, user) -> bool:
+    """Staff (шагнал тараах эрхтэй), админ эсвэл ботын эзэн."""
+    return await is_admin(bot, user) or await bot.db.is_staff(user.id)
+
+
+STAFF_CAP = 0.5  # staff нэг удаад татварын сангийн хамгийн ихдээ 50%-ийг тарааж болно
+
+
 def parse_duration(text: str) -> int | None:
     """'30s', '10m', '2h', '1d' → секунд. Буруу бол None."""
     t = text.strip().lower()

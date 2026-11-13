@@ -66,8 +66,11 @@ USAGE = {
     "divorce": ("💔", "Салах (100,000₮).", "{p}divorce", "{p}divorce"),
     "couple": ("💞", "Гэр бүлийн мэдээлэл.", "{p}couple", "{p}couple"),
     "date": ("🌹", "Ханьтайгаа болзох (30,000₮).", "{p}date", "{p}date"),
-    "giveaway": ("🎉", "Админ: татварын сангаас giveaway.", "{p}giveaway <дүн | pool> <10m | 2h | 1d> [ялагчийн тоо]", "{p}giveaway 500k 1h 2"),
+    "giveaway": ("🎉", "Staff, админ: татварын сангаас giveaway.", "{p}giveaway <дүн | pool> <10m | 2h | 1d> [ялагчийн тоо]", "{p}giveaway 500k 1h 2"),
     "pool": ("🏛️", "Татварын сангийн үлдэгдэл.", "{p}pool", "{p}pool"),
+    "staff": ("🎖️", "Staff жагсаалт, эрх. Админ staff томилно/хасна.", "{p}staff [add | remove @хүн]", "{p}staff add @Bat"),
+    "event": ("🎪", "Staff: татварын сангаас event шагнал тараах.", "{p}event give <дүн | pool> @хүн @хүн ... [нэр]  |  {p}event podium <дүн> @1 @2 @3 [нэр]", "{p}event give 300k @Bat @Dorj Chess тэмцээн"),
+    "donate": ("💝", "Татварын санд хандивлах (хамгийн багадаа 1,000₮).", "{p}donate <дүн>", "{p}donate 50k"),
     "admin": ("🛠️", "Админы цэс ба командууд.", "{p}admin [give | take | set | item | revive | ...]", "{p}admin give @Bat 1m"),
     "info": ("ℹ️", "Бот, сервер, статистик.", "{p}info", "{p}info"),
     "addmoney": ("🛠️", "Bot Owner: хэрэглэгчид мөнгө нэмэх.", "{p}addmoney <@хэрэглэгч> <дүн>", "{p}addmoney @Bat 1m"),
@@ -79,7 +82,8 @@ EMOTE_USAGE = ("🎭", "Бусдад эможи үзүүлэх.", "{p}{name} <@�
 
 def usage_embed(ctx, command) -> discord.Embed:
     p = ctx.clean_prefix
-    name = command.name if command else "help"
+    root = getattr(command, "root_parent", None) or command
+    name = root.name if root else "help"
     info = USAGE.get(name)
     if info is None:
         emoji, desc, usage, example = EMOTE_USAGE

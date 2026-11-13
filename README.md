@@ -46,3 +46,10 @@ Python + discord.py + SQLite. Угтвар: `q` эсвэл `!` (том жижи�
 - **qemote** — дэлгүүр шиг цэс (5 ангилал, 70 эможи, жишээ GIF).
 - **Шинэ бараа:** хайрцаг 16, хэрэгсэл 14, металл 22, үнэт эдлэл 26, байшин 28 (бүгд pixel icon-той, `icons.pack`).
 - **Админ:** `qadmin shop restart [ID]` — дэлгүүрийн өдрийн нөөцийг шинэчилнэ.
+
+## v6
+- **Казино, Dately pixel art**: coinflip, dice, slots, minefield, duel, draw, roulette, blackjack, crash, horse, dately бүр өөрийн pixel зурагтай (`gameart.py`, фонт шаардахгүй).
+- **Байшингийн зураг** (28 байшин, `houseart.py`): `qhouse`, `qhouse buy`, `qhouse shop` (цэснээс сонгож зургийг харна).
+- **qhair / qmakeup** — Үс + Makeup нэг цэсэнд (табтай): уруул 8, нүдний сүүдэр 8, хацар 6, нэмэлт 7 (сорви, сормуус, eyeliner, одон гялгар, дайны будаг, нулимс, хар хэвлий). Үс 15,000₮, makeup 10,000₮.
+- **Staff**: админаас доогуур эрх. `qstaff add|remove @хүн` (админ), `qgiveaway`, `qevent give|podium|log` — зөвхөн татварын сангаас, нэг удаад сангийн 50% хүртэл. `qdonate <дүн>` — хэн ч санд хандивлаж болно.
+- `pix.py` — pixel зурах жижиг сан (3x5 фонт, suit, chip).

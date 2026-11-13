@@ -78,6 +78,19 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS admins (
     user_id INTEGER PRIMARY KEY
 );
+CREATE TABLE IF NOT EXISTS staff (
+    user_id  INTEGER PRIMARY KEY,
+    added_by INTEGER NOT NULL DEFAULT 0,
+    added_at REAL NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS staff_log (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    action  TEXT NOT NULL,
+    amount  INTEGER NOT NULL DEFAULT 0,
+    note    TEXT NOT NULL DEFAULT '',
+    at      REAL NOT NULL DEFAULT 0
+);
 CREATE TABLE IF NOT EXISTS giveaways (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     guild_id   INTEGER NOT NULL DEFAULT 0,
@@ -171,6 +184,7 @@ MIGRATIONS = {
     "phone_battery": "INTEGER NOT NULL DEFAULT 100",
     "hair_style": "TEXT",
     "hair_color": "TEXT",
+    "makeup": "TEXT",
 }
 
 COOLDOWN_COLUMNS = {"last_burglary", "last_rob", "last_hack", "last_mine", "last_date"}
@@ -716,6 +730,18 @@ class Database:
             await self.conn.commit()
             return cur.rowcount == 1
 
+    async def set_look(self, user_id: int, style: str, color, makeup: str, price: int) -> bool:
+        """Үс + makeup-ийг нэг дор хадгална (үнийг нийлүүлж төлнө)."""
+        async with self.lock:
+            await self._ensure(user_id)
+            cur = await self.conn.execute(
+                "UPDATE users SET balance = balance - ?, hair_style = ?, hair_color = ?, makeup = ? "
+                "WHERE user_id = ? AND balance >= ?",
+                (price, style, color, makeup or None, user_id, price),
+            )
+            await self.conn.commit()
+            return cur.rowcount == 1
+
     # ---------- түүх (history) ----------
     async def get_history(self, user_id: int):
         cur = await self.conn.execute("SELECT * FROM user_history WHERE user_id = ?", (user_id,))
@@ -1198,6 +1224,81 @@ class Database:
     async def list_admins(self) -> list[int]:
         cur = await self.conn.execute("SELECT user_id FROM admins")
         return [r["user_id"] for r in await cur.fetchall()]
+
+    # ---------- staff (шагнал тараах эрхтэй хүмүүс) ----------
+    async def is_staff(self, user_id: int) -> bool:
+        cur = await self.conn.execute("SELECT 1 FROM staff WHERE user_id = ?", (user_id,))
+        return await cur.fetchone() is not None
+
+    async def add_staff(self, user_id: int, by: int) -> bool:
+        async with self.lock:
+            cur = await self.conn.execute(
+                "INSERT OR IGNORE INTO staff (user_id, added_by, added_at) VALUES (?, ?, ?)",
+                (user_id, by, time.time()),
+            )
+            await self.conn.commit()
+            return cur.rowcount == 1
+
+    async def remove_staff(self, user_id: int) -> bool:
+        async with self.lock:
+            cur = await self.conn.execute("DELETE FROM staff WHERE user_id = ?", (user_id,))
+            await self.conn.commit()
+            return cur.rowcount == 1
+
+    async def list_staff(self) -> list[int]:
+        cur = await self.conn.execute("SELECT user_id FROM staff ORDER BY added_at")
+        return [r["user_id"] for r in await cur.fetchall()]
+
+    async def log_staff(self, user_id: int, action: str, amount: int, note: str = ""):
+        async with self.lock:
+            await self.conn.execute(
+                "INSERT INTO staff_log (user_id, action, amount, note, at) VALUES (?, ?, ?, ?, ?)",
+                (user_id, action, amount, note[:200], time.time()),
+            )
+            await self.conn.commit()
+
+    async def staff_log_recent(self, limit: int = 10):
+        cur = await self.conn.execute("SELECT * FROM staff_log ORDER BY id DESC LIMIT ?", (limit,))
+        return await cur.fetchall()
+
+    async def pool_payout(self, shares: dict, by: int, action: str, note: str) -> bool:
+        """Татварын сангаас хэд хэдэн хүнд нэг дор мөнгө тараана (бүгд эсвэл юу ч биш)."""
+        total = sum(shares.values())
+        async with self.lock:
+            cur = await self.conn.execute(
+                "UPDATE settings SET value = value - ? WHERE key = 'pool' AND value >= ?", (total, total)
+            )
+            if cur.rowcount != 1:
+                await self.conn.rollback()
+                return False
+            for uid, amt in shares.items():
+                await self.conn.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (amt, uid))
+            await self.conn.execute(
+                "INSERT INTO staff_log (user_id, action, amount, note, at) VALUES (?, ?, ?, ?, ?)",
+                (by, action, total, note[:200], time.time()),
+            )
+            await self.conn.commit()
+            return True
+
+    async def donate_pool(self, user_id: int, amount: int) -> bool:
+        """Хэтэвчнээс татварын санд хандивлана."""
+        async with self.lock:
+            cur = await self.conn.execute(
+                "UPDATE users SET balance = balance - ? WHERE user_id = ? AND balance >= ?", (amount, user_id, amount)
+            )
+            if cur.rowcount != 1:
+                await self.conn.rollback()
+                return False
+            await self.conn.execute(
+                "INSERT INTO settings (key, value) VALUES ('pool', ?) ON CONFLICT(key) DO UPDATE SET value = value + ?",
+                (amount, amount),
+            )
+            await self.conn.execute(
+                "INSERT INTO staff_log (user_id, action, amount, note, at) VALUES (?, 'donate', ?, '', ?)",
+                (user_id, amount, time.time()),
+            )
+            await self.conn.commit()
+            return True
 
     async def confiscate(self, user_id: int, amount: int) -> int:
         """Хэтэвчнээс, дутвал банкнаас мөнгө хураана. Хураасан дүнг буцаана (сан руу орно)."""
