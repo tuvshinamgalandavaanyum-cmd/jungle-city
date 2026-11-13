@@ -5,7 +5,7 @@ import time
 import discord
 from discord.ext import commands, tasks
 
-from perms import is_admin, parse_duration
+from perms import STAFF_CAP, is_admin, is_staff, parse_duration
 from usage import send_usage
 from utils import fmt, fmt_duration, parse_amount, reply
 
@@ -128,9 +128,9 @@ class Giveaway(commands.Cog):
 
     @commands.command(name="giveaway", aliases=["gw"])
     async def giveaway(self, ctx: commands.Context, amount: str, duration: str, winners: str = "1"):
-        """Giveaway: giveaway <дүн | pool> <хугацаа 10m/2h/1d> [ялагчийн тоо] (админ)"""
-        if not await is_admin(self.bot, ctx.author):
-            await reply(ctx, "🚫 Энэ командыг зөвхөн админ ашиглана.")
+        """Giveaway: giveaway <дүн | pool> <хугацаа 10m/2h/1d> [ялагчийн тоо] (staff, админ)"""
+        if not await is_staff(self.bot, ctx.author):
+            await reply(ctx, "🚫 Энэ командыг зөвхөн staff эсвэл админ ашиглана.")
             return
         pool = await self.bot.db.get_setting("pool")
         prize = parse_amount(amount, pool)
@@ -140,6 +140,9 @@ class Giveaway(commands.Cog):
             return
         if secs < 10 or secs > 14 * 86400:
             await reply(ctx, "❌ Хугацаа 10 секундээс 14 хоногийн хооронд байх ёстой.")
+            return
+        if not await is_admin(self.bot, ctx.author) and prize > int(pool * STAFF_CAP):
+            await reply(ctx, f"❌ Staff нэг удаад сангийн {int(STAFF_CAP * 100)}%-иас ихийг ({fmt(int(pool * STAFF_CAP))}) тараах боломжгүй.")
             return
         if prize > pool or not await self.bot.db.take_pool(prize):
             await reply(ctx, f"❌ Татварын сан хүрэлцэхгүй. Сан: **{fmt(pool)}**")
@@ -151,6 +154,7 @@ class Giveaway(commands.Cog):
         view = GiveawayView(self, gid)
         msg = await ctx.send(embed=giveaway_embed(row), view=view)
         await self.bot.db.set_giveaway_message(gid, msg.id)
+        await self.bot.db.log_staff(ctx.author.id, "giveaway", prize, f"{n} ялагч")
 
     @commands.command(name="pool", aliases=["treasury", "tax"])
     async def pool(self, ctx: commands.Context):
@@ -161,7 +165,7 @@ class Giveaway(commands.Cog):
             description=f"Цалин, өдрийн цалингаас 10% татвар авч, энд хуримтлуулна.\n\n💰 Үлдэгдэл: **{fmt(pool)}**",
             color=0x3B82F6,
         )
-        embed.set_footer(text="Админ энэ сангаас giveaway зохион байгуулна")
+        embed.set_footer(text="Staff, админ энэ сангаас giveaway, event зохион байгуулна · donate <дүн> гэж хандивлаж болно")
         await reply(ctx, embed=embed)
 
 

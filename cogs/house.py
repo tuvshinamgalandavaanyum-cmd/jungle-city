@@ -15,7 +15,9 @@ from houses import (
     safe_next_price,
     safe_slot_cap,
 )
+from houseart import house_file, stamp_house
 from items import ITEMS, find_items, get_item
+from ui import OwnerView, safe_edit
 from usage import send_usage
 from utils import fmt, parse_amount, parse_qty, reply
 
@@ -30,6 +32,44 @@ async def resolve_in(ctx, query: str, pool):
         await reply(ctx, f"🔎 Олон бараа таарч байна: {names}. Яг ID-г бичнэ үү.")
         return None
     return matches[0]
+
+
+class HouseShopView(OwnerView):
+    """Байшингийн зарын жагсаалтаас сонгож зургийг нь харах."""
+
+    def __init__(self, ctx, current):
+        super().__init__(ctx.author.id, timeout=180)
+        self.ctx, self.current = ctx, current
+        half = (len(HOUSES) + 1) // 2
+        for row, chunk in enumerate((HOUSES[:half], HOUSES[half:])):
+            if not chunk:
+                continue
+            sel = discord.ui.Select(
+                placeholder=f"🏠 Байшин сонгож зургийг харах ({chunk[0].name} – {chunk[-1].name})",
+                options=[
+                    discord.SelectOption(label=h.name[:100], value=h.key, emoji=h.emoji[0] if h.emoji else None,
+                                         description=f"{h.price:,}₮ · {h.rooms} өрөө × {h.slots}"[:100])
+                    for h in chunk
+                ],
+                row=row,
+            )
+            sel.callback = self.on_pick
+            self.add_item(sel)
+
+    async def on_pick(self, interaction):
+        h = get_house(interaction.data["values"][0])
+        if h is None:
+            await interaction.response.defer()
+            return
+        p = self.ctx.clean_prefix
+        mark = " ✅ (таны байшин)" if self.current and self.current.key == h.key else ""
+        e = discord.Embed(title=f"{h.emoji} {h.name}{mark}", color=0x8B5CF6)
+        e.add_field(name="💰 Үнэ", value=fmt(h.price), inline=True)
+        e.add_field(name="🚪 Өрөө", value=f"{h.rooms} өрөө", inline=True)
+        e.add_field(name="📦 Багтаамж", value=f"{h.slots} эд зүйл / өрөө", inline=True)
+        e.set_footer(text=f"Авах: {p}house buy {h.key}")
+        stamp_house(e)
+        await safe_edit(interaction, embed=e, view=self, attachments=[house_file(h.key)])
 
 
 class HouseCog(commands.Cog, name="House"):
@@ -72,7 +112,8 @@ class HouseCog(commands.Cog, name="House"):
         safe = f"Түвшин {user['safe_level']}" if user["safe_level"] else "Байхгүй"
         embed.add_field(name="🔐 Сейф", value=safe, inline=True)
         embed.set_footer(text=f"{p}house bedroom | {p}house bedroom use <ID> | {p}safe")
-        await reply(ctx, embed=embed)
+        stamp_house(embed)
+        await reply(ctx, embed=embed, file=house_file(house.key))
 
     async def _shop(self, ctx):
         p = ctx.clean_prefix
@@ -90,9 +131,10 @@ class HouseCog(commands.Cog, name="House"):
             color=0x8B5CF6,
         )
         embed.set_footer(
-            text=f"Авах: {p}house buy <ID> · Сайжруулахад хуучин байшингийн {int(HOUSE_SELL_RATE * 100)}% буцаан тооцогдоно"
+            text=f"Авах: {p}house buy <ID> · Доорх цэснээс байшин сонгоод зургийг нь харна уу"
         )
-        await reply(ctx, embed=embed)
+        view = HouseShopView(ctx, current)
+        view.message = await reply(ctx, embed=embed, view=view)
 
     async def _buy(self, ctx, query: str):
         target = find_house(query)
@@ -121,7 +163,8 @@ class HouseCog(commands.Cog, name="House"):
             embed.add_field(name="↩️ Хуучин байшингийн буцаалт", value=fmt(refund), inline=True)
         embed.add_field(name="🚪 Өрөө", value=f"{target.rooms} өрөө · {target.slots} эд зүйл/өрөө", inline=False)
         embed.set_footer(text=f"{ctx.clean_prefix}house bedroom use <ID> гэж эд зүйлээ байрлуулаарай")
-        await reply(ctx, embed=embed)
+        stamp_house(embed)
+        await reply(ctx, embed=embed, file=house_file(target.key))
 
     async def _room(self, ctx, room_key: str, args: list[str]):
         p = ctx.clean_prefix

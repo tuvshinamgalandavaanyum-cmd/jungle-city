@@ -52,8 +52,16 @@ APPS = [
         ("auchistory [ID]", "Зарагдсан үнийн түүх"),
         ("purchases", "Миний худалдан авалт (хэдэн ₮-өөр авсан)"),
     ]),
-    ("hair", "💇", "Үсчин", "Үсний засалт (16 хэв маяг, 14 өнгө)", [
-        ("hair", "Үсчинд очиж үсээ засуулах (15,000₮)"),
+    ("hair", "💇", "Үсчин & Makeup", "Үсний засалт, нүүрний будалт", [
+        ("hair", "Үс: 16 хэв маяг, 14 өнгө (15,000₮)"),
+        ("makeup", "Makeup: уруул, нүдний сүүдэр, хацар, сорви, одон гялгар гэх мэт (10,000₮)"),
+    ]),
+    ("staff", "🎖️", "Staff & Event", "Татварын сангаас giveaway, event шагнал тараах", [
+        ("staff", "Staff жагсаалт, эрх, сангийн үлдэгдэл"),
+        ("giveaway <дүн|pool> <10m|2h|1d> [ялагч]", "Staff, админ: товчоор оролцдог giveaway"),
+        ("event give <дүн|pool> @хүн ... [нэр]", "Staff: тэнцүү хуваан шагнал өгөх"),
+        ("event podium <дүн|pool> @1 @2 @3 [нэр]", "50/30/20 хуваалт"),
+        ("donate <дүн>", "Хэн ч санд хандивлаж болно"),
     ]),
     ("history", "📖", "Түүх", "Өөрийнхөө түүхийг бичих, бусдынхыг унших", [
         ("history", "Бүртгэлтэй хүмүүсийн жагсаалт → сонгож түүхийг унших"),
@@ -270,7 +278,8 @@ class PhoneView(OwnerView):
             await interaction.response.send_message("📵 Танд утас алга.", ephemeral=True)
             return
         view, embed = await cog.open_for(interaction.user, interaction.channel, interaction.guild, self.ctx.clean_prefix)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        from gameart import art_file
+        await interaction.response.send_message(embed=embed, view=view, file=art_file("dately"), ephemeral=True)
 
     async def on_refresh(self, interaction):
         await interaction.response.edit_message(embed=await self.build(), view=self)

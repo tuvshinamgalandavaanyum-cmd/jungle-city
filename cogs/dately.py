@@ -2,6 +2,7 @@ import math
 import time
 
 import discord
+from gameart import art_file, stamp
 from discord.ext import commands
 
 from invview import owns
@@ -112,7 +113,7 @@ class DatelyView(OwnerView):
         self.add_item(nav_button("💌 Хүсэлт илгээх", self.on_send, discord.ButtonStyle.success, disabled=self.selected is None, row=1))
         self.add_item(nav_button("💞 Match-ууд", self.on_matches, row=1))
 
-        embed = discord.Embed(title="💘 Dately", color=0xEC4899)
+        embed = stamp(discord.Embed(title="💘 Dately", color=0xEC4899), "dately")
         if self.selected is None:
             embed.description = "Бүртгэлтэй хүмүүсээс нэгийг сонгоод **💌 Хүсэлт илгээх** дарна.\nТэр хүн **ok** дарвал match болно, **nahh** дарвал татгалзана."
         else:
@@ -168,9 +169,10 @@ class DatelyView(OwnerView):
                 "**ok** дарвал зөвшөөрнө, **nahh** дарвал татгалзана.",
                 color=0xEC4899,
             )
+            stamp(e, "dately")
             try:
                 req.message = await self.channel.send(
-                    f"<@{self.selected}>", embed=e, view=req,
+                    f"<@{self.selected}>", embed=e, view=req, file=art_file("dately"),
                     allowed_mentions=discord.AllowedMentions(users=True))
                 self.msg = "✅ Хүсэлт илгээгдлээ."
             except Exception:
@@ -207,7 +209,7 @@ class Dately(commands.Cog):
             await reply(ctx, f"📵 Dately-д утас хэрэгтэй. `{ctx.clean_prefix}buy nokia` эсвэл `{ctx.clean_prefix}buy phone`")
             return
         view, embed = await self.open_for(ctx.author, ctx.channel, ctx.guild, ctx.clean_prefix)
-        view.message = await reply(ctx, embed=embed, view=view)
+        view.message = await reply(ctx, embed=embed, view=view, file=art_file("dately"))
 
 
 async def setup(bot):

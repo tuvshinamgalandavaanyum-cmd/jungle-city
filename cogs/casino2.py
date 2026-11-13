@@ -7,6 +7,7 @@ import discord
 from discord.ext import commands
 
 from cogs.casino import GOLD, GREEN, GREY, RED, result_embed
+from gameart import art_file, stamp
 from ui import OwnerView, nav_button
 from usage import send_usage
 from utils import MAX_BET, MIN_BET, fmt, reply
@@ -93,7 +94,7 @@ class BlackjackView(OwnerView):
             self.add_item(b)
 
     def embed(self, reveal=False, footer="") -> discord.Embed:
-        e = discord.Embed(title="🃏 Blackjack", color=GOLD)
+        e = stamp(discord.Embed(title="🃏 Blackjack", color=GOLD), "blackjack")
         e.add_field(name=f"🧑 Та ({hand_value(self.player)})", value=show(self.player), inline=False)
         dv = f" ({hand_value(self.dealer)})" if reveal else ""
         e.add_field(name=f"🏦 Дилер{dv}", value=show(self.dealer, hide_second=not reveal), inline=False)
@@ -131,7 +132,7 @@ class BlackjackView(OwnerView):
             await self.cog.bot.db.bank_add(self.owner_id, payout)
         self.disable_all()
         bank = await bank_of(self.cog.bot, self.owner_id)
-        e = result_embed("🃏 Blackjack", f"{note}\n🧑 {show(self.player)} = **{pv}**\n🏦 {show(self.dealer)} = **{dv}**", self.bet, payout, bank)
+        e = result_embed("🃏 Blackjack", f"{note}\n🧑 {show(self.player)} = **{pv}**\n🏦 {show(self.dealer)} = **{dv}**", self.bet, payout, bank, "blackjack")
         if interaction is not None:
             await interaction.response.edit_message(embed=e, view=self)
         elif self.message is not None:
@@ -195,7 +196,7 @@ class CrashView(OwnerView):
         else:
             e = discord.Embed(title="🚀 Crash", description=f"# ×{self.mult:.2f}\nАвах дүн: **{fmt(int(self.bet * self.mult))}**", color=GOLD)
         e.add_field(name="💸 Бооцоо", value=fmt(self.bet), inline=True)
-        return e
+        return stamp(e, "crash")
 
     def start(self):
         self.task = asyncio.create_task(self._run())
@@ -233,7 +234,7 @@ class CrashView(OwnerView):
         self.stop()
         self.disable_all()
         bank = await bank_of(self.cog.bot, self.owner_id)
-        e = result_embed("💥 Crash!", f"Ракет **×{self.crash_point:.2f}** дээр дэглэв. Та мөнгөө аваагүй.", self.bet, 0, bank)
+        e = result_embed("💥 Crash!", f"Ракет **×{self.crash_point:.2f}** дээр дэглэв. Та мөнгөө аваагүй.", self.bet, 0, bank, "crash")
         if self.message is not None:
             try:
                 await self.message.edit(embed=e, view=self)
@@ -252,7 +253,7 @@ class CrashView(OwnerView):
         await self.cog.bot.db.bank_add(self.owner_id, payout)
         self.disable_all()
         bank = await bank_of(self.cog.bot, self.owner_id)
-        e = result_embed("💰 Crash: амжилттай авлаа", f"**×{self.mult:.2f}** дээр мөнгөө авлаа! (Ракет ×{self.crash_point:.2f} дээр дэглэх байсан)", self.bet, payout, bank)
+        e = result_embed("💰 Crash: амжилттай авлаа", f"**×{self.mult:.2f}** дээр мөнгөө авлаа! (Ракет ×{self.crash_point:.2f} дээр дэглэх байсан)", self.bet, payout, bank, "crash")
         await interaction.response.edit_message(embed=e, view=self)
 
     async def on_timeout(self):
@@ -307,7 +308,7 @@ class HorseView(OwnerView):
         )
         e.add_field(name="💸 Бооцоо", value=fmt(self.bet), inline=True)
         e.set_footer(text="Морьдоо сонгосны дараа бооцоо банкнаас хасагдана")
-        return e
+        return stamp(e, "horse")
 
     async def on_pick(self, interaction, pick: int | None = None):
         if self.started:
@@ -350,7 +351,7 @@ class HorseView(OwnerView):
         wname, wemo, _ = HORSES[winner]
         pname = HORSES[pick][0]
         desc = f"🏆 Түрүүлсэн: {wemo} **{winner + 1}. {wname}**\nТаны морь: **{pick + 1}. {pname}**"
-        e = result_embed("🐎 Морин уралдаан", desc, self.bet, payout, bank)
+        e = result_embed("🐎 Морин уралдаан", desc, self.bet, payout, bank, "horse")
         try:
             await msg.edit(content=track_frame([TRACK if i == winner else pos[i] for i in range(len(HORSES))], "Дууслаа"), embed=e)
         except Exception:
@@ -377,7 +378,7 @@ class Casino2(commands.Cog):
         bet = await take_bet(ctx, amount)
         if bet is None:
             return
-        msg = await ctx.reply("🎡 Дугуй эргэж байна...", mention_author=False)
+        msg = await ctx.reply("🎡 Дугуй эргэж байна...", file=art_file("roulette"), mention_author=False)
         await asyncio.sleep(1.5)
         n = random.randint(0, 36)
         win = fn(n)
@@ -385,7 +386,7 @@ class Casino2(commands.Cog):
         if payout:
             await self.bot.db.bank_add(ctx.author.id, payout)
         desc = f"🎡 Бөмбөг: {roulette_color(n)} **{n}**\nТаны сонголт: **{label}** (×{mult})"
-        e = result_embed("🎡 Рулет", desc, bet, payout, await bank_of(self.bot, ctx.author.id))
+        e = result_embed("🎡 Рулет", desc, bet, payout, await bank_of(self.bot, ctx.author.id), "roulette")
         try:
             await msg.edit(content=None, embed=e)
         except Exception:
@@ -399,10 +400,10 @@ class Casino2(commands.Cog):
             return
         view = BlackjackView(self, ctx, bet)
         if hand_value(view.player) == 21:
-            view.message = await ctx.reply("🃏 ...", mention_author=False)
+            view.message = await ctx.reply("🃏 ...", file=art_file("blackjack"), mention_author=False)
             await view.settle(None)
             return
-        view.message = await reply(ctx, embed=view.embed(), view=view)
+        view.message = await reply(ctx, embed=view.embed(), view=view, file=art_file("blackjack"))
 
     @commands.command(name="crash")
     async def crash(self, ctx: commands.Context, amount: str):
@@ -411,7 +412,7 @@ class Casino2(commands.Cog):
         if bet is None:
             return
         view = CrashView(self, ctx, bet)
-        view.message = await reply(ctx, embed=view.embed(), view=view)
+        view.message = await reply(ctx, embed=view.embed(), view=view, file=art_file("crash"))
         view.start()
 
     @commands.command(name="horse", aliases=["morin", "uraldaan", "мори"])
@@ -430,12 +431,12 @@ class Casino2(commands.Cog):
             return
         if horse_no is not None and horse_no.isdigit() and 1 <= int(horse_no) <= len(HORSES):
             view = HorseView(self, ctx, bet)
-            view.message = await ctx.reply("🏇 ...", mention_author=False)
+            view.message = await ctx.reply("🏇 ...", file=art_file("horse"), mention_author=False)
             fake = _Fake(ctx, view.message)
             await view.on_pick(fake, int(horse_no) - 1)
             return
         view = HorseView(self, ctx, bet)
-        view.message = await reply(ctx, embed=view.embed(), view=view)
+        view.message = await reply(ctx, embed=view.embed(), view=view, file=art_file("horse"))
 
 
 class _Fake:

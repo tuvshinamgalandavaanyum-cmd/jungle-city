@@ -7,6 +7,7 @@ from discord.ext import commands
 
 from ui import OwnerView, nav_button
 from usage import send_usage
+from gameart import art_file, stamp
 from utils import MAX_BET, MIN_BET, fmt, jailed, parse_amount, reply
 
 GREEN, RED, GREY, GOLD = 0x22C55E, 0xEF4444, 0x6B7280, 0xF59E0B
@@ -59,7 +60,7 @@ def mine_multiplier(picks: int) -> float:
     return MINE_EDGE * comb(MINE_TILES, picks) / comb(MINE_TILES - MINE_COUNT, picks)
 
 
-def result_embed(title: str, desc: str, bet: int, payout: int, bank: int) -> discord.Embed:
+def result_embed(title: str, desc: str, bet: int, payout: int, bank: int, art: str | None = None) -> discord.Embed:
     net = payout - bet
     color = GREEN if net > 0 else (GREY if net == 0 else RED)
     embed = discord.Embed(title=title, description=desc, color=color)
@@ -71,6 +72,8 @@ def result_embed(title: str, desc: str, bet: int, payout: int, bank: int) -> dis
     else:
         embed.add_field(name="💀 Алдагдал", value=f"```diff\n-{-net:,} ₮\n```", inline=True)
     embed.add_field(name="🏛️ Банк", value=fmt(bank), inline=True)
+    if art:
+        stamp(embed, art)
     return embed
 
 
@@ -112,6 +115,7 @@ class MineView(OwnerView):
             ),
             color=GOLD,
         )
+        stamp(embed, "minefield")
         embed.add_field(name="💸 Бооцоо", value=fmt(self.bet), inline=True)
         embed.add_field(name="💎 Нээсэн", value=f"{k}/{MINE_MAX_PICKS}", inline=True)
         embed.add_field(
@@ -313,7 +317,7 @@ class DuelView(discord.ui.View):
         embed.set_footer(
             text=footer or f"Раунд {self.rounds_played + 1} · 2 раунд хожсон нь ялна · тэнцвэл дахин"
         )
-        return embed
+        return stamp(embed, "duel")
 
     async def choose(self, interaction, key: str):
         if self.finished:
@@ -415,7 +419,7 @@ class DrawView(discord.ui.View):
                 "**Бэлдээрэй...** GO! гарахыг хүлээгээд хамгийн түрүүнд буудна уу!"
             ),
             color=GOLD,
-        )
+        ).set_image(url="attachment://draw.png")
 
     def start(self):
         self.task = asyncio.create_task(self._go())
@@ -428,7 +432,7 @@ class DrawView(discord.ui.View):
         self.btn.disabled = False
         self.btn.label = "🔫 БУУД!"
         self.btn.style = discord.ButtonStyle.danger
-        embed = discord.Embed(title="🔫 GO!!!", description="**ОДОО БУУД!**", color=RED)
+        embed = stamp(discord.Embed(title="🔫 GO!!!", description="**ОДОО БУУД!**", color=RED), "draw")
         if self.message is not None:
             try:
                 await self.message.edit(embed=embed, view=self)
@@ -452,6 +456,7 @@ class DrawView(discord.ui.View):
             description=f"{winner.mention} хамгийн хурдан буудлаа!\nХожил: **{fmt(self.payout)}**",
             color=GREEN,
         )
+        stamp(embed, "draw")
         await interaction.response.edit_message(embed=embed, view=self)
 
     async def on_timeout(self):
@@ -539,8 +544,8 @@ class Casino(commands.Cog):
         if payout:
             await self.bot.db.bank_add(ctx.author.id, payout)
         desc = f"🪙 Зоос шидлээ...\nТаны сонголт: **{pick}** · Унасан тал: **{landed}**"
-        embed = result_embed("🪙 Coinflip", desc, bet, payout, await self._bank(ctx.author.id))
-        await reply(ctx, embed=embed)
+        embed = result_embed("🪙 Coinflip", desc, bet, payout, await self._bank(ctx.author.id), "coinflip")
+        await reply(ctx, embed=embed, file=art_file("coinflip"))
 
     # ---------- dice ----------
     @commands.command(name="dice")
@@ -557,8 +562,8 @@ class Casino(commands.Cog):
         if payout:
             await self.bot.db.bank_add(ctx.author.id, payout)
         desc = f"🎲 Шоо хаялаа... **{roll}** буулаа!\nТаны таамаг: **{guess}**"
-        embed = result_embed("🎲 Dice", desc, bet, payout, await self._bank(ctx.author.id))
-        await reply(ctx, embed=embed)
+        embed = result_embed("🎲 Dice", desc, bet, payout, await self._bank(ctx.author.id), "dice")
+        await reply(ctx, embed=embed, file=art_file("dice"))
 
     # ---------- slots ----------
     @commands.command(name="slots", aliases=["s"])
@@ -577,8 +582,8 @@ class Casino(commands.Cog):
         desc = f"🎰 **│ {reels[0]} │ {reels[1]} │ {reels[2]} │**"
         if mult:
             desc += f"\nҮржвэр: ×{mult:g}"
-        embed = result_embed("🎰 Slots", desc, bet, payout, await self._bank(ctx.author.id))
-        await reply(ctx, embed=embed)
+        embed = result_embed("🎰 Slots", desc, bet, payout, await self._bank(ctx.author.id), "slots")
+        await reply(ctx, embed=embed, file=art_file("slots"))
 
     # ---------- minefield ----------
     @commands.command(name="mf", aliases=["minefield"])
@@ -588,10 +593,10 @@ class Casino(commands.Cog):
         if bet is None:
             return
         view = MineView(self, ctx, bet)
-        view.message = await reply(ctx, embed=view.embed(), view=view)
+        view.message = await reply(ctx, embed=view.embed(), view=view, file=art_file("minefield"))
 
     # ---------- уриалгат тоглоом ----------
-    async def _challenge(self, ctx, member: discord.Member, amount: str, title: str, make_starter):
+    async def _challenge(self, ctx, member: discord.Member, amount: str, title: str, make_starter, art: str | None = None):
         if member.id == ctx.author.id or member.bot:
             await reply(ctx, "❌ Энэ хүнийг уриалах боломжгүй.")
             return
@@ -612,7 +617,9 @@ class Casino(commands.Cog):
         )
         view = ChallengeView(self, ctx, ctx.author, member, bet, None)
         view.starter = make_starter(view)
-        view.message = await reply(ctx, embed=embed, view=view)
+        if art:
+            stamp(embed, art)
+        view.message = await reply(ctx, embed=embed, view=view, **({"file": art_file(art)} if art else {}))
 
     @commands.command(name="duel", aliases=["d"])
     async def duel(self, ctx: commands.Context, member: discord.Member, amount: str):
@@ -626,7 +633,7 @@ class Casino(commands.Cog):
 
             return starter
 
-        await self._challenge(ctx, member, amount, "⚔️ Дуэлийн уриалга", make_starter)
+        await self._challenge(ctx, member, amount, "⚔️ Дуэлийн уриалга", make_starter, "duel")
 
     @commands.command(name="draw", aliases=["quickdraw"])
     async def quickdraw(self, ctx: commands.Context, member: discord.Member, amount: str):
@@ -641,7 +648,7 @@ class Casino(commands.Cog):
 
             return starter
 
-        await self._challenge(ctx, member, amount, "🔫 Quick Draw уриалга", make_starter)
+        await self._challenge(ctx, member, amount, "🔫 Quick Draw уриалга", make_starter, "draw")
 
 
 async def setup(bot: commands.Bot):

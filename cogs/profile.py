@@ -7,7 +7,7 @@ from discord.ext import commands
 from actions import wear_item
 from houses import get_house
 from items import ITEMS, SLOT_NAMES, find_items, get_pet
-from sprite import HAIR_HEX, render_scene
+from sprite import HAIR_HEX, parse_makeup, render_scene
 from ui import OwnerView, nav_button
 from usage import send_usage
 from utils import MAX_STRENGTH, fmt, reply
@@ -174,6 +174,8 @@ class Profile(commands.Cog):
         u = await self.bot.db.get_user(user_id)
         if u["hair_style"]:
             colors["hair"] = (u["hair_style"], HAIR_HEX.get(u["hair_color"]))
+        if u["makeup"]:
+            colors["makeup"] = parse_makeup(u["makeup"])
         return colors, names
 
     @commands.command(name="profile", aliases=["p", "me", "char"])
