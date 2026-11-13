@@ -369,7 +369,12 @@ class Crime(commands.Cog):
     @commands.command(name="block")
     async def block(self, ctx: commands.Context):
         """Хамгаалалтын бамбай ашиглах (2.5 цаг)"""
-        await activate_shield(self.bot, ctx)
+        key = "shield"
+        for k in ("shield", "shield_lite", "shield_pro", "shield_max"):
+            if await self.bot.db.item_qty(ctx.author.id, k) > 0:
+                key = k
+                break
+        await activate_shield(self.bot, ctx, key)
 
     # ---------- шорон ----------
     @commands.command(name="bail")

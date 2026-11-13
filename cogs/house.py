@@ -82,12 +82,11 @@ class HouseCog(commands.Cog, name="House"):
         for h in HOUSES:
             mark = " ✅" if current and current.key == h.key else ""
             lines.append(
-                f"{h.emoji} **{h.name}**{mark} — {fmt(h.price)}\n"
-                f"> {h.rooms} өрөө · өрөө бүрт {h.slots} эд зүйл · ID: `{h.key}`"
+                f"{h.emoji} **{h.name}**{mark} — {fmt(h.price)} · {h.rooms} өрөө × {h.slots} · `{h.key}`"
             )
         embed = discord.Embed(
             title="🏘️ Байшингийн зар",
-            description="\n\n".join(lines),
+            description="\n".join(lines),
             color=0x8B5CF6,
         )
         embed.set_footer(

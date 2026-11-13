@@ -35,6 +35,10 @@ SLIDES = [
       ("admin pool add <дүн>", "Санд мөнгө нэмэх"),
       ("admin pool take <дүн>", "Сангаас хасах"),
       ("giveaway <дүн|pool> <10m|2h|1d> [ялагч]", "Giveaway эхлүүлэх")]),
+    ("Дэлгүүр", "🛍️", "Дэлгүүрийн өдрийн нөөцийг шинэчилж, дууссан бараануудыг дахин нээнэ.",
+     [("admin shop restart", "Бүх барааны нөөцийг шинэчлэх (шинэ бараа гарна)"),
+      ("admin shop restart <ID>", "Нэг барааны нөөцийг шинэчлэх"),
+      ("admin shop", "Өнөөдөр хэдэн бараа зарагдсан/дууссан харах")]),
     ("Админ томилох", "👮", "Зөвхөн ботын эзэн.",
      [("admin op @хүн", "Админ болгох"), ("admin deop @хүн", "Админ эрхийг авах"),
       ("admin reset @хүн confirm", "Хүний бүх өгөгдлийг устгах (аюултай!)")]),
@@ -262,6 +266,33 @@ class Admin(commands.Cog):
                 await reply(ctx, "❌ Санд хангалттай мөнгө алга.")
                 return
         await reply(ctx, f"🏛️ Татварын сан: **{fmt(await db.get_setting('pool'))}**")
+
+    # ---- дэлгүүр ----
+    async def _do_shop(self, ctx, rest):
+        from utils import shop_day
+        from items import find_items
+        db = self.bot.db
+        if rest and rest[0].lower() in ("restart", "reset", "restock", "шинэчлэх"):
+            key = None
+            if len(rest) > 1:
+                found = find_items(rest[1])
+                if len(found) != 1:
+                    await reply(ctx, "❌ Бараа олдсонгүй эсвэл олон байна. Яг ID бичнэ үү.")
+                    return
+                key = found[0].key
+            n = await db.reset_shop_stock(key)
+            what = f"**{key}**" if key else "бүх бараа"
+            await reply(ctx, f"🔄 Дэлгүүр шинэчлэгдлээ: {what} (нөөц сэргэсэн бараа: {n}). Шинэ бараа дахин худалдаанд гарлаа!")
+            return
+        sold = await db.shop_sold(shop_day())
+        out = [f"{find_items(k)[0].emoji if find_items(k) else ''} `{k}` — {v} зарагдсан" for k, v in sold.items()]
+        embed = discord.Embed(
+            title="🛍️ Өнөөдрийн дэлгүүр",
+            description="\n".join(out[:40]) or "Өнөөдөр хязгаартай бараа зарагдаагүй байна.",
+            color=0xF59E0B,
+        )
+        embed.set_footer(text=f"{ctx.clean_prefix}admin shop restart — нөөц шинэчлэх")
+        await reply(ctx, embed=embed)
 
     # ---- админ томилгоо (зөвхөн эзэн) ----
     async def _owner_only(self, ctx) -> bool:

@@ -170,7 +170,7 @@ class Auction(commands.Cog):
             e.set_footer(text=f"Дундаж {fmt(sum(prices) // len(prices))} · хамгийн өндөр {fmt(max(prices))}")
         await reply(ctx, embed=e)
 
-    @commands.command(name="purchases", aliases=["history", "tuuh", "худалдан_авалт"])
+    @commands.command(name="purchases", aliases=["buyhistory", "худалдан_авалт"])
     async def purchases(self, ctx: commands.Context):
         """Миний худалдан авалтын түүх: ямар бараа хэдэн ₮-өөр авсан"""
         rows = await self.bot.db.recent_purchases(ctx.author.id, 15)

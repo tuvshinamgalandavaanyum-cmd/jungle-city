@@ -52,6 +52,18 @@ APPS = [
         ("auchistory [ID]", "Зарагдсан үнийн түүх"),
         ("purchases", "Миний худалдан авалт (хэдэн ₮-өөр авсан)"),
     ]),
+    ("hair", "💇", "Үсчин", "Үсний засалт (16 хэв маяг, 14 өнгө)", [
+        ("hair", "Үсчинд очиж үсээ засуулах (15,000₮)"),
+    ]),
+    ("history", "📖", "Түүх", "Өөрийнхөө түүхийг бичих, бусдынхыг унших", [
+        ("history", "Бүртгэлтэй хүмүүсийн жагсаалт → сонгож түүхийг унших"),
+        ("history @хүн", "Тухайн хүний түүх"),
+        ("history pic", "Зураг хавсаргаад түүхдээ зураг оруулах"),
+    ]),
+    ("dately", "💘", "Dately", "Утасны апп: танилцах хүсэлт", [
+        ("dately", "Хүн сонгож хүсэлт илгээх (утас хэрэгтэй, 📱 утасны цэснээс ч нээнэ)"),
+        ("—", "Хүлээн авагч **ok** дарвал match, **nahh** дарвал татгалзана"),
+    ]),
     ("photo", "📸", "Зураг", "Машин, амьтан, байшин, хайртай хүнтэйгээ зураг", [
         ("photo [URL]", "Зургийн студи: арын зураг (attachment/URL), давхарга зөөх"),
     ]),
@@ -59,11 +71,15 @@ APPS = [
         ("petshop", "Амьтны дэлгүүр (зурагтай, ◀ ▶)"),
         ("buypet <ID>", "Амьтан авах → профайл дээр дүртэйгээ хамт харагдана"),
     ]),
-    ("casino", "🎰", "Казино", "⚠️ Казино зөвхөн банкны данснаас тоглоно", [
+    ("casino", "🎰", "Казино", "⚠️ Казино зөвхөн банкны данснаас тоглоно (дээд 500,000₮)", [
         ("cf <дүн> [сүүл|тоо]", "Зоос шидэх"),
         ("dice <дүн> <1-6>", "Шоо"),
         ("slots <дүн>", "Слот"),
         ("mf <дүн>", "Minefield"),
+        ("roulette <дүн> <red|black|even|odd|low|high|0-36>", "Рулет"),
+        ("blackjack <дүн>", "Blackjack (3:2, давхарлах)"),
+        ("crash <дүн>", "Crash: ракет дэглэхээс өмнө мөнгөө ав"),
+        ("horse <дүн> [1-6]", "Морин уралдаан"),
         ("duel <@хүн> <дүн>", "Чулуу-хайч-даавуу"),
         ("draw <@хүн> <дүн>", "Quick Draw"),
     ]),
@@ -91,8 +107,8 @@ APPS = [
         ("date", "Болзоо"),
         ("divorce", "Салах"),
     ]),
-    ("emote", "🎭", "Эможи", "Romance · Fight · Laugh · +18", [
-        ("emote [ангилал]", "Бүх эможигийн жагсаалт"),
+    ("emote", "🎭", "Эможи", "Romance · Fight · Laugh · Social · +18", [
+        ("emote [ангилал]", "Эможигийн цэс (дэлгүүр шиг, ◀ ▶, жишээ GIF)"),
         ("hug, kiss, cuddle, pat ...", "💞 Romance (10)"),
         ("slap, punch, kick, bite ...", "⚔️ Fight (12)"),
         ("laugh, smile, dance, tickle ...", "😂 Laugh (13)"),
@@ -210,6 +226,7 @@ class PhoneView(OwnerView):
         self.cog, self.ctx = cog, ctx
         self.add_item(nav_button("📩 Нууц мессеж", self.on_msg, discord.ButtonStyle.primary))
         self.add_item(nav_button("🔌 Цэнэглэх", self.on_charge, discord.ButtonStyle.success))
+        self.add_item(nav_button("💘 Dately", self.on_dately))
         self.add_item(nav_button("🔄", self.on_refresh))
 
     async def build(self):
@@ -243,6 +260,17 @@ class PhoneView(OwnerView):
             await self.message.edit(embed=await self.build(), view=self)
         except Exception:
             pass
+
+    async def on_dately(self, interaction):
+        cog = self.cog.bot.get_cog("Dately")
+        if cog is None:
+            await interaction.response.send_message("❌ Dately апп одоогоор унтраалттай байна.", ephemeral=True)
+            return
+        if not await owns(self.cog.bot.db, self.owner_id, "phone"):
+            await interaction.response.send_message("📵 Танд утас алга.", ephemeral=True)
+            return
+        view, embed = await cog.open_for(interaction.user, interaction.channel, interaction.guild, self.ctx.clean_prefix)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     async def on_refresh(self, interaction):
         await interaction.response.edit_message(embed=await self.build(), view=self)

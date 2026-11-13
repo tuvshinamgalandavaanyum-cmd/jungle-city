@@ -8,8 +8,9 @@ from PIL import Image
 import discord
 from discord.ext import commands
 
-from actions import activate_shield, eat_food, open_box, revive_player, use_potion, wear_item
+from actions import activate_shield, eat_food, open_box, revive_player, use_potion, use_tool, wear_item
 from items import (
+    TOOL_SPEC,
     CATEGORIES,
     CATEGORY_BY_KEY,
     PETS,
@@ -382,10 +383,8 @@ class Shop(commands.Cog):
                 return
             if item.kind == "food":
                 await eat_food(self.bot, ctx, item, n)
-            elif item.key == "shield":
-                await activate_shield(self.bot, ctx)
-            elif item.key in ("luck_potion", "money_potion"):
-                await use_potion(self.bot, ctx, item)
+            elif item.key in TOOL_SPEC:
+                await use_tool(self.bot, ctx, item, n)
             elif item.key == "revive":
                 await revive_player(self.bot, ctx, ctx.author)
             elif item.kind == "box":
