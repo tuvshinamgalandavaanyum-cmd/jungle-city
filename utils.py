@@ -18,7 +18,7 @@ BANK_FEE = 200  # банк, шилжүүлгийн шимтгэл
 JAIL_SECONDS = 12 * 3600
 PROTECT_SECONDS = int(2.5 * 3600)
 MIN_BET = 1_000
-MAX_BET = 250_000
+MAX_BET = 500_000
 
 
 def fmt(amount: int) -> str:

@@ -36,12 +36,127 @@ class Cv:
 
 HAIR = {"male": "#2b1b12", "female": "#3a2314"}
 
+# ---------- үсний засалт (16 хэв маяг) ----------
+HAIR_STYLES = [  # (түлхүүр, нэр, emoji)
+    ("default", "Ердийн", "🙂"), ("buzz", "Богино", "💈"), ("side", "Хажуу сугалсан", "😎"),
+    ("long", "Урт шулуун", "👩"), ("pigtails", "Хоёр гэзэг", "👧"), ("ponytail", "Нэг гэзэг", "🐴"),
+    ("mohawk", "Хуйх (Mohawk)", "🦜"), ("afro", "Афро", "🧑‍🦱"), ("bun", "Зангилаа", "🍙"),
+    ("bob", "Каре (Bob)", "💁"), ("spiky", "Сэртэгнэсэн", "⚡"), ("curly", "Буржгар", "🌀"),
+    ("bald", "Халзан", "🥚"), ("middle", "Голоор нь хуваасан", "🧖"), ("braids", "Монгол сүлд", "🎀"),
+    ("undercut", "Андеркат", "✂️"), ("bangs", "Хүйтэн хөмсөг (Bangs)", "🌸"),
+]
+HAIR_COLORS = [  # (түлхүүр, нэр, hex)
+    ("black", "Хар", "#1a1a1d"), ("darkbrown", "Бараан хүрэн", "#2b1b12"), ("brown", "Хүрэн", "#5a3825"),
+    ("chestnut", "Туулайн хүрэн", "#7a4a2a"), ("blonde", "Шар", "#d6b25e"), ("platinum", "Цагаавтар", "#e8e0c8"),
+    ("red", "Улаан", "#b3402a"), ("ginger", "Улбар шар", "#c8662b"), ("pink", "Ягаан", "#e879a8"),
+    ("blue", "Цэнхэр", "#3b82f6"), ("purple", "Нил ягаан", "#8b5cf6"), ("green", "Ногоон", "#22c55e"),
+    ("white", "Цагаан", "#f3f4f6"), ("teal", "Номин", "#14b8a6"),
+]
+HAIR_HEX = {k: h for k, _, h in HAIR_COLORS}
+
+
+def _hair_back(cv, style, hx, oy, hair):
+    """Толгойн ард (дээр биеийн өмнө, нүүрнээс өмнө) зурагдах үс."""
+    hl = _sh(hair, 1.3)
+    if style == "long":
+        cv.r(hx - 1, oy + 4, 16, 17, hair)
+        cv.r(hx - 1, oy + 17, 16, 1, _sh(hair, 0.8))
+    elif style == "bob":
+        cv.r(hx - 1, oy + 4, 16, 10, hair)
+    elif style == "afro":
+        cv.r(hx - 3, oy - 3, 20, 14, hair)
+    elif style == "braids":
+        cv.r(hx - 1, oy + 4, 16, 8, hair)
+    elif style == "bangs":
+        cv.r(hx - 1, oy + 4, 16, 13, hair)
+    elif style == "middle":
+        cv.r(hx - 1, oy + 4, 16, 10, hair)
+
+
+def _hair_front(cv, style, hx, oy, hair, skin):
+    """Нүүр зурагдсаны дараа дээр нь зурагдах үс."""
+    hl = _sh(hair, 1.4)
+    dk = _sh(hair, 0.75)
+    if style == "buzz":
+        cv.r(hx, oy + 2, 14, 3, hair); cv.r(hx, oy + 2, 14, 1, hl)
+    elif style == "side":
+        cv.r(hx - 1, oy + 1, 16, 5, hair); cv.r(hx - 1, oy + 1, 16, 1, hl)
+        cv.r(hx - 1, oy + 5, 7, 3, hair); cv.r(hx - 1, oy + 5, 3, 6, hair); cv.r(hx + 12, oy + 5, 3, 3, hair)
+    elif style == "long":
+        cv.r(hx - 1, oy + 1, 16, 5, hair); cv.r(hx - 1, oy + 1, 16, 1, hl)
+        cv.r(hx - 1, oy + 5, 3, 10, hair); cv.r(hx + 12, oy + 5, 3, 10, hair)
+        cv.r(hx + 2, oy + 5, 8, 1, hair)
+    elif style == "pigtails":
+        cv.r(hx - 1, oy + 1, 16, 5, hair); cv.r(hx - 1, oy + 1, 16, 1, hl)
+        cv.r(hx - 1, oy + 5, 3, 3, hair); cv.r(hx + 12, oy + 5, 3, 3, hair)
+        cv.r(hx - 4, oy + 7, 4, 10, hair); cv.r(hx + 14, oy + 7, 4, 10, hair)
+        cv.r(hx - 4, oy + 7, 4, 1, (230, 60, 90, 255)); cv.r(hx + 14, oy + 7, 4, 1, (230, 60, 90, 255))
+    elif style == "ponytail":
+        cv.r(hx - 1, oy + 1, 16, 5, hair); cv.r(hx - 1, oy + 1, 16, 1, hl)
+        cv.r(hx - 1, oy + 5, 3, 3, hair); cv.r(hx + 12, oy + 5, 3, 3, hair)
+        cv.r(hx + 14, oy + 3, 4, 3, hair); cv.r(hx + 15, oy + 6, 3, 11, hair)
+        cv.r(hx + 14, oy + 4, 4, 1, (230, 60, 90, 255))
+    elif style == "mohawk":
+        cv.r(hx + 1, oy + 2, 12, 2, _sh(hair, 0.5))
+        cv.r(hx + 5, oy - 4, 4, 7, hair); cv.r(hx + 5, oy - 4, 4, 1, hl)
+        cv.r(hx + 4, oy - 1, 6, 4, hair)
+    elif style == "afro":
+        cv.r(hx - 3, oy - 3, 20, 9, hair); cv.r(hx - 3, oy - 3, 20, 1, hl)
+        cv.r(hx - 3, oy + 5, 4, 5, hair); cv.r(hx + 13, oy + 5, 4, 5, hair)
+        for xx in range(hx - 2, hx + 16, 3):
+            cv.p(xx, oy - 1, dk); cv.p(xx + 1, oy + 2, dk)
+    elif style == "bun":
+        cv.r(hx - 1, oy + 1, 16, 5, hair); cv.r(hx - 1, oy + 1, 16, 1, hl)
+        cv.r(hx - 1, oy + 5, 3, 3, hair); cv.r(hx + 12, oy + 5, 3, 3, hair)
+        cv.r(hx + 4, oy - 4, 6, 5, hair); cv.r(hx + 4, oy - 4, 6, 1, hl)
+    elif style == "bob":
+        cv.r(hx - 1, oy + 1, 16, 5, hair); cv.r(hx - 1, oy + 1, 16, 1, hl)
+        cv.r(hx - 1, oy + 5, 3, 8, hair); cv.r(hx + 12, oy + 5, 3, 8, hair)
+        cv.r(hx + 2, oy + 5, 10, 2, hair)
+    elif style == "spiky":
+        cv.r(hx - 1, oy + 2, 16, 3, hair)
+        for i in range(0, 16, 3):
+            cv.r(hx - 1 + i, oy - 2 + (i // 3 % 2) * 1, 3, 4, hair)
+            cv.p(hx + i, oy - 2 + (i // 3 % 2) * 1, hl)
+        cv.r(hx - 1, oy + 5, 2, 3, hair); cv.r(hx + 13, oy + 5, 2, 3, hair)
+    elif style == "curly":
+        cv.r(hx - 2, oy - 1, 18, 7, hair)
+        cv.r(hx - 2, oy + 5, 3, 5, hair); cv.r(hx + 13, oy + 5, 3, 5, hair)
+        for xx in range(hx - 1, hx + 15, 2):
+            cv.p(xx, oy, hl); cv.p(xx + 1, oy + 3, dk)
+    elif style == "bald":
+        cv.r(hx + 3, oy + 2, 3, 1, _sh(skin, 1.25))
+    elif style == "middle":
+        cv.r(hx - 1, oy + 1, 16, 5, hair); cv.r(hx - 1, oy + 1, 16, 1, hl)
+        cv.r(hx - 1, oy + 5, 3, 9, hair); cv.r(hx + 12, oy + 5, 3, 9, hair)
+        cv.r(hx + 6, oy + 1, 2, 5, dk)
+        cv.r(hx + 2, oy + 5, 3, 1, hair); cv.r(hx + 9, oy + 5, 3, 1, hair)
+    elif style == "braids":
+        cv.r(hx - 1, oy + 1, 16, 5, hair); cv.r(hx - 1, oy + 1, 16, 1, hl)
+        cv.r(hx - 1, oy + 5, 3, 3, hair); cv.r(hx + 12, oy + 5, 3, 3, hair)
+        for side_x in (hx - 3, hx + 14):
+            cv.r(side_x, oy + 6, 3, 19, hair)
+            for yy in range(oy + 7, oy + 24, 3):
+                cv.r(side_x, yy, 3, 1, dk)
+            cv.r(side_x, oy + 24, 3, 1, (250, 204, 21, 255))
+    elif style == "undercut":
+        cv.r(hx, oy - 1, 14, 5, hair); cv.r(hx, oy - 1, 14, 1, hl)
+        cv.r(hx - 1, oy + 4, 2, 2, _sh(hair, 0.6)); cv.r(hx + 13, oy + 4, 2, 2, _sh(hair, 0.6))
+    elif style == "bangs":
+        cv.r(hx - 1, oy + 1, 16, 6, hair); cv.r(hx - 1, oy + 1, 16, 1, hl)
+        cv.r(hx - 1, oy + 5, 3, 9, hair); cv.r(hx + 12, oy + 5, 3, 9, hair)
+        for xx in range(hx + 2, hx + 12, 2):
+            cv.p(xx, oy + 7, hair)
+
+
 
 def _character(frame, gender, skin_hex, outfit, dead=False):
     """Нэг фрэймийн дүр (outline-тай, logical хэмжээ)."""
     cv = Cv()
     skin = _rgb(skin_hex)
-    hair = _rgb(HAIR.get(gender, "#2b1b12"))
+    hair_style, hair_hex = outfit.get("hair", (None, None))
+    hair_style = hair_style if hair_style and hair_style != "default" else None
+    hair = _rgb(hair_hex if isinstance(hair_hex, str) else HAIR.get(gender, "#2b1b12"))
     fem = gender == "female"
     top_style, top_c = outfit.get("top", DEFAULT_OUTFIT["top"])
     bot_style, bot_c = outfit.get("bottom", DEFAULT_OUTFIT["bottom"])
@@ -150,22 +265,27 @@ def _character(frame, gender, skin_hex, outfit, dead=False):
         cv.r(bx + bw - 4, oy + 16, 2, 6, _sh(top_c, 0.7))
     # ---- толгой ----
     cv.r(hx + 3, oy + 13, 6, 3, skin)  # хүзүү
-    if fem:  # арын үс
+    if hair_style:
+        _hair_back(cv, hair_style, hx, oy, hair)
+    elif fem:  # арын үс
         cv.r(hx - 1, oy + 4, 16, 12, hair)
     cv.r(hx, oy + 3, 14, 12, skin)
     cv.r(hx - 1, oy + 5, 1, 7, skin)
     cv.r(hx + 14, oy + 5, 1, 7, skin)
     # үс
-    cv.r(hx - 1, oy + 1, 16, 5, hair)
-    cv.r(hx - 1, oy + 1, 16, 1, _sh(hair, 1.4))
-    cv.r(hx - 1, oy + 5, 3, 3 if not fem else 6, hair)
-    cv.r(hx + 12, oy + 5, 3, 3 if not fem else 6, hair)
-    if fem:
-        cv.r(hx + 2, oy + 5, 6, 1, hair)
-        cv.r(hx + 8, oy + 5, 3, 2, hair)
+    if hair_style:
+        _hair_front(cv, hair_style, hx, oy, hair, skin)
     else:
-        cv.r(hx + 3, oy + 5, 3, 1, hair)
-        cv.r(hx + 9, oy + 5, 2, 1, hair)
+        cv.r(hx - 1, oy + 1, 16, 5, hair)
+        cv.r(hx - 1, oy + 1, 16, 1, _sh(hair, 1.4))
+        cv.r(hx - 1, oy + 5, 3, 3 if not fem else 6, hair)
+        cv.r(hx + 12, oy + 5, 3, 3 if not fem else 6, hair)
+        if fem:
+            cv.r(hx + 2, oy + 5, 6, 1, hair)
+            cv.r(hx + 8, oy + 5, 3, 2, hair)
+        else:
+            cv.r(hx + 3, oy + 5, 3, 1, hair)
+            cv.r(hx + 9, oy + 5, 2, 1, hair)
     # нүд
     if dead:
         for ex in (hx + 3, hx + 9):
@@ -293,3 +413,15 @@ def render_scene(gender, skin_hex, outfit, dead=False, pet_key=None, name_tag=No
     pal = [f.convert("P", palette=Image.ADAPTIVE, colors=128) for f in frames]
     pal[0].save(buf, "GIF", save_all=True, append_images=pal[1:], duration=220, loop=0, disposal=2)
     return buf.getvalue(), "gif"
+
+
+def render_preview(gender, skin_hex, outfit, scale: int = 8) -> bytes:
+    """Үс сонгох үеийн тогтмол PNG (толгой, мөр хүртэл)."""
+    ch = _character(1, gender, skin_hex, outfit, False)
+    ch = ch.crop((0, 0, LW, 30))
+    big = ch.resize((ch.width * scale, ch.height * scale), Image.NEAREST)
+    bg = Image.new("RGBA", big.size, (58, 64, 104, 255))
+    bg.alpha_composite(big)
+    buf = io.BytesIO()
+    bg.convert("RGB").save(buf, "PNG")
+    return buf.getvalue()

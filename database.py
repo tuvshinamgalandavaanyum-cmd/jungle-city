@@ -116,6 +116,18 @@ CREATE TABLE IF NOT EXISTS auctions (
     channel_id  INTEGER,
     created_at  REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS user_history (
+    user_id    INTEGER PRIMARY KEY,
+    story      TEXT NOT NULL DEFAULT '',
+    image      BLOB,
+    updated_at REAL NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS dately (
+    a_id       INTEGER NOT NULL,
+    b_id       INTEGER NOT NULL,
+    ts         REAL NOT NULL,
+    PRIMARY KEY (a_id, b_id)
+);
 CREATE TABLE IF NOT EXISTS shop_stock (
     item_key TEXT PRIMARY KEY,
     day      INTEGER NOT NULL,
@@ -157,6 +169,8 @@ MIGRATIONS = {
     "last_mine": "REAL NOT NULL DEFAULT 0",
     "hack_level": "INTEGER NOT NULL DEFAULT 0",
     "phone_battery": "INTEGER NOT NULL DEFAULT 100",
+    "hair_style": "TEXT",
+    "hair_color": "TEXT",
 }
 
 COOLDOWN_COLUMNS = {"last_burglary", "last_rob", "last_hack", "last_mine", "last_date"}
@@ -689,7 +703,92 @@ class Database:
             await self.conn.commit()
         return out
 
+    # ---------- үс ----------
+    async def set_hair(self, user_id: int, style: str, color: str, price: int) -> bool:
+        """Үсчинд төлбөр төлж үсээ солино."""
+        async with self.lock:
+            await self._ensure(user_id)
+            cur = await self.conn.execute(
+                "UPDATE users SET balance = balance - ?, hair_style = ?, hair_color = ? "
+                "WHERE user_id = ? AND balance >= ?",
+                (price, style, color, user_id, price),
+            )
+            await self.conn.commit()
+            return cur.rowcount == 1
+
+    # ---------- түүх (history) ----------
+    async def get_history(self, user_id: int):
+        cur = await self.conn.execute("SELECT * FROM user_history WHERE user_id = ?", (user_id,))
+        return await cur.fetchone()
+
+    async def set_story(self, user_id: int, story: str):
+        async with self.lock:
+            await self.conn.execute(
+                "INSERT INTO user_history (user_id, story, updated_at) VALUES (?, ?, ?) "
+                "ON CONFLICT(user_id) DO UPDATE SET story = excluded.story, updated_at = excluded.updated_at",
+                (user_id, story, time.time()),
+            )
+            await self.conn.commit()
+
+    async def set_story_image(self, user_id: int, image: bytes | None):
+        async with self.lock:
+            await self.conn.execute(
+                "INSERT INTO user_history (user_id, story, image, updated_at) VALUES (?, '', ?, ?) "
+                "ON CONFLICT(user_id) DO UPDATE SET image = excluded.image, updated_at = excluded.updated_at",
+                (user_id, image, time.time()),
+            )
+            await self.conn.commit()
+
+    async def history_users(self):
+        """Бүртгэлтэй бүх хүн; түүхтэй нь түрүүлж. -> [(user_id, has_story)]"""
+        cur = await self.conn.execute(
+            "SELECT u.user_id AS user_id, "
+            "(COALESCE(h.story, '') != '' OR h.image IS NOT NULL) AS has "
+            "FROM users u LEFT JOIN user_history h ON h.user_id = u.user_id "
+            "WHERE u.registered = 1 ORDER BY has DESC, COALESCE(h.updated_at, 0) DESC, u.user_id"
+        )
+        return [(r["user_id"], bool(r["has"])) for r in await cur.fetchall()]
+
+    # ---------- Dately ----------
+    async def add_match(self, a: int, b: int) -> bool:
+        lo, hi = sorted((a, b))
+        async with self.lock:
+            cur = await self.conn.execute(
+                "INSERT OR IGNORE INTO dately (a_id, b_id, ts) VALUES (?, ?, ?)", (lo, hi, time.time())
+            )
+            await self.conn.commit()
+            return cur.rowcount == 1
+
+    async def is_match(self, a: int, b: int) -> bool:
+        lo, hi = sorted((a, b))
+        cur = await self.conn.execute("SELECT 1 FROM dately WHERE a_id = ? AND b_id = ?", (lo, hi))
+        return await cur.fetchone() is not None
+
+    async def matches(self, user_id: int):
+        cur = await self.conn.execute(
+            "SELECT CASE WHEN a_id = ? THEN b_id ELSE a_id END AS other, ts FROM dately "
+            "WHERE a_id = ? OR b_id = ? ORDER BY ts DESC",
+            (user_id, user_id, user_id),
+        )
+        return await cur.fetchall()
+
+    async def unmatch(self, a: int, b: int):
+        lo, hi = sorted((a, b))
+        async with self.lock:
+            await self.conn.execute("DELETE FROM dately WHERE a_id = ? AND b_id = ?", (lo, hi))
+            await self.conn.commit()
+
     # ---------- дэлгүүрийн нөөц ----------
+    async def reset_shop_stock(self, item_key: str | None = None) -> int:
+        """Админ: өнөөдрийн нөөцийг шинэчилнэ (бүгдийг эсвэл нэг барааг)."""
+        async with self.lock:
+            if item_key:
+                cur = await self.conn.execute("DELETE FROM shop_stock WHERE item_key = ?", (item_key,))
+            else:
+                cur = await self.conn.execute("DELETE FROM shop_stock")
+            await self.conn.commit()
+            return cur.rowcount
+
     async def shop_sold(self, day: int) -> dict[str, int]:
         cur = await self.conn.execute(
             "SELECT item_key, sold FROM shop_stock WHERE day = ?", (day,)

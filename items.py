@@ -439,6 +439,110 @@ SPECIAL: list[Item] = [
     Item("gold_ore", "Алтан хүдэр", "Gold ore", 40_000, "metal", "🪨", "Малтаж олсон алтан хүдэр"),
 ]
 
+# ---------- нэмэлт металл (14) ----------
+METALS += [
+    Item("lead", "Хар тугалга", "Lead", 3_000, "metal", "⚫", "Хүнд хар тугалга", stock=30),
+    Item("tin", "Цагаан тугалга", "Tin", 4_000, "metal", "🥫", "Цагаан тугалга", stock=30),
+    Item("zinc", "Цайр", "Zinc", 6_000, "metal", "🔘", "Цайр", stock=30),
+    Item("aluminium", "Хөнгөн цагаан", "Aluminium", 7_000, "metal", "🥄", "Хөнгөн цагаан", stock=30),
+    Item("nickel", "Никель", "Nickel", 15_000, "metal", "🪙", "Никель", stock=25),
+    Item("brass", "Гууль", "Brass", 18_000, "metal", "🎺", "Шар гууль", stock=25),
+    Item("steel", "Ган", "Steel", 20_000, "metal", "⚙️", "Хатуу ган", stock=25),
+    Item("chrome", "Хром", "Chrome", 30_000, "metal", "🪞", "Гялалзсан хром", stock=20),
+    Item("cobalt", "Кобальт", "Cobalt", 45_000, "metal", "🔵", "Хөх кобальт", stock=15),
+    Item("titanium", "Титан", "Titanium", 90_000, "metal", "🛡️", "Хөнгөн ба бат бөх титан", stock=12),
+    Item("tungsten", "Вольфрам", "Tungsten", 120_000, "metal", "💡", "Хамгийн хэцүү металл", stock=10),
+    Item("palladium", "Палладий", "Palladium", 350_000, "metal", "⚪", "Ховор палладий", stock=6),
+    Item("rhodium", "Родий", "Rhodium", 1_100_000, "metal", "✨", "Дэлхийн хамгийн үнэтэй металлын нэг", stock=3),
+    Item("iridium", "Иридий", "Iridium", 1_300_000, "metal", "🌟", "Туйлын ховор иридий", stock=3),
+]
+METALS.sort(key=lambda i: i.price)
+
+# ---------- нэмэлт үнэт эдлэл (20) ----------
+JEWELS += [
+    Item("silver_ring", "Мөнгөн бөгж", "Silver ring", 80_000, "jewel", "💍", "Энгийн мөнгөн бөгж", stock=8),
+    Item("earrings", "Год (энгэрийн)", "Earrings", 120_000, "jewel", "👂", "Гоёмсог год", stock=8),
+    Item("bracelet", "Бугуйвч", "Bracelet", 180_000, "jewel", "📿", "Алтан бугуйвч", stock=8),
+    Item("pearl", "Сувд", "Pearl", 220_000, "jewel", "⚪", "Далайн сувд", stock=6),
+    Item("amber", "Хув", "Amber", 260_000, "jewel", "🟠", "Хув чулуу", stock=6),
+    Item("coral", "Шүрэн", "Coral", 280_000, "jewel", "🪸", "Улаан шүрэн", stock=6),
+    Item("turquoise", "Номин", "Turquoise", 320_000, "jewel", "🔷", "Номин чулуу", stock=6),
+    Item("jade", "Хаш", "Jade", 380_000, "jewel", "🟢", "Ногоон хаш", stock=5),
+    Item("amethyst", "Аметист", "Amethyst", 420_000, "jewel", "🟣", "Нил ягаан аметист", stock=5),
+    Item("topaz", "Топаз", "Topaz", 450_000, "jewel", "🟡", "Шар топаз", stock=5),
+    Item("opal", "Опал", "Opal", 520_000, "jewel", "🤍", "Солонгын өнгөт опал", stock=5),
+    Item("gold_chain", "Алтан гинж", "Gold chain", 600_000, "jewel", "⛓️", "Зузаан алтан гинж", stock=5),
+    Item("emerald", "Маргад", "Emerald", 700_000, "jewel", "🟩", "Ногоон маргад", stock=4),
+    Item("sapphire", "Индранил", "Sapphire", 800_000, "jewel", "🟦", "Хөх индранил", stock=4),
+    Item("ruby", "Лал", "Ruby", 900_000, "jewel", "🟥", "Улаан лал", stock=4),
+    Item("brooch", "Эрдэнийн энгэрийн зүү", "Brooch", 1_100_000, "jewel", "🎖️", "Эрдэнэт зүү", stock=3),
+    Item("diamond_ring", "Очир эрдэнийн бөгж", "Diamond ring", 1_800_000, "jewel", "💍", "Алмаазан бөгж", stock=3),
+    Item("tiara", "Титэм (Tiara)", "Tiara", 2_500_000, "jewel", "👸", "Охидын титэм", stock=2),
+    Item("crown", "Хааны титэм", "Crown", 4_000_000, "jewel", "👑", "Хааны титэм", stock=2),
+    Item("scepter", "Хааны таяг", "Scepter", 6_000_000, "jewel", "🔱", "Хааны эрх мэдлийн таяг", stock=1),
+]
+JEWELS.sort(key=lambda i: i.price)
+
+# ---------- нэмэлт хайрцаг (13) ----------
+# mode: cash = мөнгө хожих кейс | loot/house/digital/food/clothes/metal/jewel/rare_hi = бараа гарна
+BOX_SPEC = {
+    "box": ("loot", (1, 3), 0.05, 0.02),
+    "case": ("cash",),
+    "chest": ("rare", (1, 2)),
+    "coin_case": ("cash",), "silver_case": ("cash",), "gold_case": ("cash",), "diamond_case": ("cash",),
+    "kitchen_box": ("house", (2, 4)),
+    "tech_box": ("digital", (1, 2)),
+    "food_box": ("food", (3, 6)),
+    "style_box": ("clothes", (1, 2)),
+    "lucky_box": ("loot", (3, 6), 0.20, 0.0),
+    "metal_crate": ("metal", (2, 4)),
+    "jewel_box": ("jewel", (1, 2)),
+    "premium_box": ("loot", (6, 10), 0.50, 0.08),
+    "royal_chest": ("rare_hi", (3, 5)),
+}
+BOXES += [
+    Item("coin_case", "Mini Cash Case", "Mini case", 20_000, "box", "👛", "Жижиг мөнгөний кейс · 0-10×"),
+    Item("silver_case", "Silver Cash Case", "Silver case", 500_000, "box", "💼", "Мөнгөн кейс · 0-10×"),
+    Item("gold_case", "Gold Cash Case", "Gold case", 1_000_000, "box", "💰", "Алтан кейс · 0-10×"),
+    Item("diamond_case", "Diamond Cash Case", "Diamond case", 5_000_000, "box", "💎", "Очир кейс · 0-10×"),
+    Item("kitchen_box", "Гал тогооны хайрцаг", "Kitchen box", 40_000, "box", "🍳", "2-4 гэр ахуйн бараа"),
+    Item("tech_box", "Технологийн хайрцаг", "Tech box", 200_000, "box", "🎮", "1-2 дижитал бараа"),
+    Item("food_box", "Хоолны хайрцаг", "Food box", 40_000, "box", "🍱", "3-6 хоол"),
+    Item("style_box", "Хувцасны хайрцаг", "Style box", 180_000, "box", "🎁", "1-2 хувцас"),
+    Item("lucky_box", "Азын хайрцаг", "Lucky box", 90_000, "box", "🍀", "3-6 бараа · 20% ховор олдвор"),
+    Item("metal_crate", "Металлын ачаа", "Metal crate", 300_000, "box", "🧱", "2-4 металл"),
+    Item("jewel_box", "Үнэт эдлэлийн хайрцаг", "Jewel box", 700_000, "box", "💍", "1-2 үнэт эдлэл"),
+    Item("premium_box", "Premium Box", "Premium box", 250_000, "box", "🎊", "6-10 бараа · 8% Revive Active"),
+    Item("royal_chest", "Хааны сан", "Royal chest", 1_200_000, "box", "🏆", "3-5 ховор үнэт эдлэл, металл"),
+]
+BOXES.sort(key=lambda i: i.price)
+
+# ---------- нэмэлт хэрэгсэл (11) ----------
+TOOL_SPEC = {  # key -> (төрөл, утга)
+    "shield": ("shield", 2.5 * 3600),
+    "shield_lite": ("shield", 3600), "shield_pro": ("shield", 6 * 3600), "shield_max": ("shield", 12 * 3600),
+    "luck_potion": ("luck", 3600), "luck_potion_x": ("luck", 3 * 3600),
+    "money_potion": ("money", 3600), "money_potion_x": ("money", 3 * 3600),
+    "protein": ("strength", 3), "energy_bar": ("strength", 1),
+    "bail_pass": ("bail", 0), "meal_voucher": ("feed", 0),
+    "scratch_card": ("scratch", 20_000), "lotto_ticket": ("scratch", 100_000),
+}
+SCRATCH_TABLE = [(0.0, 50), (0.5, 25), (1.0, 12), (2.0, 8), (5.0, 4), (20.0, 0.9), (100.0, 0.1)]
+TOOLS += [
+    Item("shield_lite", "Бамбай (1 цаг)", "Shield lite", 40_000, "tool", "🛡️", "1 цаг дээрэм, хакераас хамгаална"),
+    Item("shield_pro", "Бамбай Pro (6 цаг)", "Shield pro", 450_000, "tool", "🛡️", "6 цаг хамгаална"),
+    Item("shield_max", "Бамбай Max (12 цаг)", "Shield max", 800_000, "tool", "🛡️", "12 цаг хамгаална"),
+    Item("luck_potion_x", "Азын сав X (3 цаг)", "Luck potion X", 200_000, "tool", "🍀", "3 цаг азын магадлал +10%"),
+    Item("money_potion_x", "Мөнгөний сав X (3 цаг)", "Money potion X", 250_000, "tool", "💰", "3 цаг ажил, цалин +10%"),
+    Item("protein", "Протейн", "Protein", 150_000, "tool", "🥤", "Хүч +3"),
+    Item("energy_bar", "Энерги батончик", "Energy bar", 30_000, "tool", "🍫", "Хүч +1"),
+    Item("bail_pass", "Шоронгоос гарах эрх", "Bail pass", 300_000, "tool", "🎫", "Шоронгоос шууд суллагдана"),
+    Item("meal_voucher", "Хоолны купон", "Meal voucher", 90_000, "tool", "🎟️", "Нэг дор бүрэн цатгана"),
+    Item("scratch_card", "Хусдаг тасалбар", "Scratch card", 20_000, "tool", "🎴", "0-100× мөнгөн шагнал"),
+    Item("lotto_ticket", "Лотерейн тасалбар", "Lotto ticket", 100_000, "tool", "🎰", "0-100× мөнгөн шагнал"),
+]
+TOOLS.sort(key=lambda i: i.price)
+
 ALL_ITEMS: list[Item] = (
     HOUSE_ITEMS + DIGITAL + JEWELS + METALS + FOODS + CLOTHES + CARS + REALTY + BOXES + TOOLS + SPECIAL
 )

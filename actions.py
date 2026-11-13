@@ -3,7 +3,10 @@ import time
 
 import discord
 
-from items import JEWELS, METALS, SLOT_NAMES, ITEMS, LOOT_POOL, get_item, random_loot, stars
+from items import (
+    BOX_SPEC, CLOTHES, DIGITAL, FOODS, HOUSE_ITEMS, ITEMS, JEWELS, METALS, SCRATCH_TABLE, SLOT_NAMES,
+    TOOL_SPEC, get_item, random_loot, stars,
+)
 from utils import (
     HUNGER_SECONDS,
     MAX_STRENGTH,
@@ -61,8 +64,9 @@ async def eat_food(bot, ctx, item, qty: int) -> bool:
     return True
 
 
-async def activate_shield(bot, ctx) -> bool:
-    """Хамгаалалтын бамбай ашиглаж 2.5 цаг дээрэм, хакераас хамгаална."""
+async def activate_shield(bot, ctx, item_key: str = "shield") -> bool:
+    """Хамгаалалтын бамбай ашиглаж дээрэм, хакераас хамгаална (shield 2.5ц, lite 1ц, pro 6ц, max 12ц)."""
+    seconds = int(TOOL_SPEC.get(item_key, ("shield", PROTECT_SECONDS))[1])
     db = bot.db
     uid = ctx.author.id
     user = await db.get_user(uid)
@@ -73,16 +77,16 @@ async def activate_shield(bot, ctx) -> bool:
             f"🛡️ Таны хамгаалалт идэвхтэй байна. **{fmt_short(user['protect_until'] - now)}** үлдсэн.",
         )
         return False
-    if not await db.remove_item(uid, "shield", 1):
+    if not await db.remove_item(uid, item_key, 1):
         await reply(
             ctx,
-            f"❌ Танд хамгаалалтын бамбай алга. `{ctx.clean_prefix}buy shield` гэж авна уу.",
+            f"❌ Танд хамгаалалтын бамбай алга. `{ctx.clean_prefix}buy {item_key}` гэж авна уу.",
         )
         return False
-    await db.set_protect(uid, now + PROTECT_SECONDS)
+    await db.set_protect(uid, now + seconds)
     embed = discord.Embed(
         title="🛡️ Хамгаалалт идэвхжлээ!",
-        description="Та 2.5 цагийн турш дээрэм, хакердалтаас хамгаалагдлаа.\nАмжилт хүсье!",
+        description=f"Та **{fmt_duration(seconds)}** дээрэм, хакердалтаас хамгаалагдлаа.\nАмжилт хүсье!",
         color=0x22C55E,
     )
     await reply(ctx, embed=embed)
@@ -99,7 +103,8 @@ async def use_potion(bot, ctx, item) -> bool:
     if not await db.remove_item(uid, item.key, 1):
         await reply(ctx, f"❌ Танд **{item.name}** алга.")
         return False
-    until = max(now, user[column]) + POTION_SECONDS
+    dur = int(TOOL_SPEC.get(item.key, ("", POTION_SECONDS))[1])
+    until = max(now, user[column]) + dur
     await db.set_potion(uid, column, until)
     what = "азын магадлал +10%" if column == "luck_until" else "ажил, өдрийн цалин +10%"
     embed = discord.Embed(
@@ -191,6 +196,10 @@ def roll_case(luck: int) -> float:
     return result
 
 
+def _weighted(pool, k, power=0.5):
+    return random.choices(pool, weights=[1 / (it.price ** power) for it in pool], k=k)
+
+
 async def open_box(bot, ctx, item, qty: int) -> bool:
     db = bot.db
     uid = ctx.author.id
@@ -199,35 +208,54 @@ async def open_box(bot, ctx, item, qty: int) -> bool:
         return False
     user = await db.get_user(uid)
     luck = luck_bonus(user)
+    spec = BOX_SPEC.get(item.key, ("loot", (1, 3), 0.05, 0.0))
+    mode = spec[0]
     lines: list[str] = []
     money = 0
     got: dict[str, int] = {}
     revive = 0
 
+    def add(items_):
+        for it in items_:
+            got[it.key] = got.get(it.key, 0) + 1
+
     for _ in range(qty):
-        if item.key == "box":
-            if random.random() < 0.02:
-                got["revive"] = got.get("revive", 0) + 1
-                revive += 1
-            elif random.random() < 0.15 - luck / 1000:
-                lines.append(random.choice(EMPTY_JOKES))
-            else:
-                for it in random_loot(random.randint(1, 3), 0.05 + luck / 500):
-                    got[it.key] = got.get(it.key, 0) + 1
-        elif item.key == "case":
+        if mode == "cash":
             mult = roll_case(luck)
             prize = int(item.price * mult)
             if prize == 0:
                 lines.append(random.choice(EMPTY_JOKES))
             money += prize
-        else:  # chest
+            continue
+        n = random.randint(*spec[1]) if len(spec) > 1 else 1
+        if mode == "loot":
+            rare, rev = spec[2], spec[3]
+            if rev and random.random() < rev:
+                got["revive"] = got.get("revive", 0) + 1
+                revive += 1
+            elif item.key == "box" and random.random() < 0.15 - luck / 1000:
+                lines.append(random.choice(EMPTY_JOKES))
+            else:
+                add(random_loot(n, rare + luck / 500))
+        elif mode == "rare":  # chest
             if random.random() < 0.15 - luck / 1000:
                 lines.append(random.choice(EMPTY_JOKES))
             else:
-                rare = JEWELS + METALS
-                weights = [1 / it.price for it in rare]
-                for it in random.choices(rare, weights=weights, k=random.randint(1, 2)):
-                    got[it.key] = got.get(it.key, 0) + 1
+                add(_weighted(JEWELS + METALS, n, 0.4))
+        elif mode == "rare_hi":
+            add(_weighted(JEWELS + METALS, n, 0.25))
+        elif mode == "house":
+            add(_weighted(HOUSE_ITEMS, n))
+        elif mode == "digital":
+            add(_weighted(DIGITAL, n))
+        elif mode == "food":
+            add(_weighted(FOODS, n))
+        elif mode == "clothes":
+            add(_weighted(CLOTHES, n, 1.0))
+        elif mode == "metal":
+            add(_weighted(METALS, n, 0.3))
+        elif mode == "jewel":
+            add(_weighted(JEWELS, n, 0.5))
 
     for key, n in got.items():
         await db.add_item(uid, key, n)
@@ -240,11 +268,11 @@ async def open_box(bot, ctx, item, qty: int) -> bool:
             name="🎁 Олсон бараа",
             value="\n".join(
                 f"{ITEMS[k].emoji} **{ITEMS[k].name}** × {n}" + (" 💖" if k == "revive" else "")
-                for k, n in got.items()
+                for k, n in list(got.items())[:20]
             ),
             inline=False,
         )
-    if item.key == "case":
+    if mode == "cash":
         net = money - item.price * qty
         sign = "+" if net >= 0 else "-"
         embed.add_field(name="💵 Хожсон", value=fmt(money), inline=True)
@@ -257,3 +285,71 @@ async def open_box(bot, ctx, item, qty: int) -> bool:
         embed.set_footer(text="💖 Revive Active олдлоо! Ховор азтай юм аа!")
     await reply(ctx, embed=embed)
     return True
+
+
+# ================= шинэ хэрэгслүүд =================
+def roll_scratch() -> float:
+    return random.choices([m for m, _ in SCRATCH_TABLE], weights=[w for _, w in SCRATCH_TABLE])[0]
+
+
+async def use_tool(bot, ctx, item, qty: int = 1) -> bool:
+    """Хэрэгслийн төрлөөр ашиглана (бамбай, potion, хүч, шорон, хоол, тасалбар)."""
+    kind, val = TOOL_SPEC.get(item.key, (None, 0))
+    db = bot.db
+    uid = ctx.author.id
+    if kind == "shield":
+        return await activate_shield(bot, ctx, item.key)
+    if kind in ("luck", "money"):
+        return await use_potion(bot, ctx, item)
+    if kind == "strength":
+        user = await db.get_user(uid)
+        if user["strength"] >= MAX_STRENGTH:
+            await reply(ctx, f"💪 Таны хүч дээд түвшиндээ ({MAX_STRENGTH}) хүрсэн байна.")
+            return False
+        if not await db.remove_item(uid, item.key, 1):
+            await reply(ctx, f"❌ Танд **{item.name}** алга.")
+            return False
+        await db.add_strength(uid, int(val), MAX_STRENGTH)
+        await reply(ctx, f"{item.emoji} **{item.name}** идлээ. 💪 Хүч **+{val}**")
+        return True
+    if kind == "bail":
+        user = await db.get_user(uid)
+        if user["jail_until"] <= time.time():
+            await reply(ctx, "✅ Та шоронд байхгүй байна.")
+            return False
+        if not await db.remove_item(uid, item.key, 1):
+            await reply(ctx, f"❌ Танд **{item.name}** алга.")
+            return False
+        await db.jail(uid, 0, 0)
+        await reply(ctx, f"{item.emoji} Та шоронгоос суллагдлаа!")
+        return True
+    if kind == "feed":
+        if not await db.remove_item(uid, item.key, 1):
+            await reply(ctx, f"❌ Танд **{item.name}** алга.")
+            return False
+        await db.set_last_fed(uid, time.time())
+        await reply(ctx, f"{item.emoji} Хоолны купон ашиглалаа. 🍞 Та бүрэн цатгалаа!")
+        return True
+    if kind == "scratch":
+        n = max(1, min(qty, 20))
+        if not await db.remove_item(uid, item.key, n):
+            await reply(ctx, f"❌ Танд {n} ширхэг **{item.name}** алга.")
+            return False
+        total = 0
+        best = 0.0
+        for _ in range(n):
+            m = roll_scratch()
+            best = max(best, m)
+            total += int(item.price * m)
+        if total:
+            await db.add_balance(uid, total)
+        net = total - item.price * n
+        embed = discord.Embed(title=f"{item.emoji} {item.name} × {n} хуслаа", color=0x22C55E if net >= 0 else 0xEF4444)
+        embed.add_field(name="💵 Хожсон", value=fmt(total), inline=True)
+        embed.add_field(name="🏆 Хамгийн их", value=f"×{best:g}", inline=True)
+        sign = "+" if net >= 0 else "-"
+        embed.add_field(name="📊 Ашиг/алдагдал", value=f"```diff\n{sign}{abs(net):,} ₮\n```", inline=False)
+        await reply(ctx, embed=embed)
+        return True
+    await reply(ctx, f"ℹ️ **{item.name}**-г шууд ашиглах боломжгүй.")
+    return False
